@@ -31,7 +31,7 @@ interface HeadCell {
   numeric: boolean;
 }
 
-const headCells: HeadCell[] = [
+export const headCells: HeadCell[] = [
   {
     id: "name",
     numeric: false,
