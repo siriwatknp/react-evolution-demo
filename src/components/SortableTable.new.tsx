@@ -19,6 +19,8 @@ import Paper from "@material-ui/core/Paper";
 import Checkbox from "@material-ui/core/Checkbox";
 import Box from '@material-ui/core/Box';
 import { getData, Data, getComparator, stableSort } from "./utils";
+import { useArrayInputSearch, getFilterByName } from "./useArrayInputSearch";
+import {isSameItem, useSelectableArray} from "./useSelectableArray";
 
 type Order = "asc" | "desc";
 
@@ -146,10 +148,11 @@ export default function EnhancedTable({ searchable, selectable, paginationEnable
   const classes = useStyles();
   const [order, setOrder] = React.useState<Order>("asc");
   const [orderBy, setOrderBy] = React.useState<keyof Data>("calories");
-  const [selected, setSelected] = React.useState<string[]>([]);
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
-  const [text, setText] = React.useState("");
+  const { result, text, setText } = useArrayInputSearch(rows, getFilterByName)
+  const { selectedItems, onToggle, onToggleAll } = useSelectableArray(rows, isSameItem)
+  const selected = selectedItems.map(({ name }) => name)
 
   const handleRequestSort = (
     event: React.MouseEvent<unknown>,
@@ -158,35 +161,6 @@ export default function EnhancedTable({ searchable, selectable, paginationEnable
     const isAsc = orderBy === property && order === "asc";
     setOrder(isAsc ? "desc" : "asc");
     setOrderBy(property);
-  };
-
-  const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) {
-      const newSelecteds = rows.map((n) => n.name);
-      setSelected(newSelecteds);
-      return;
-    }
-    setSelected([]);
-  };
-
-  const handleClick = (event: React.MouseEvent<unknown>, name: string) => {
-    const selectedIndex = selected.indexOf(name);
-    let newSelected: string[] = [];
-
-    if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selected, name);
-    } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1));
-    } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(
-        selected.slice(0, selectedIndex),
-        selected.slice(selectedIndex + 1)
-      );
-    }
-
-    setSelected(newSelected);
   };
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -231,15 +205,13 @@ export default function EnhancedTable({ searchable, selectable, paginationEnable
               numSelected={selected.length}
               order={order}
               orderBy={orderBy}
-              onSelectAllClick={handleSelectAllClick}
+              onSelectAllClick={() => onToggleAll()}
               onRequestSort={handleRequestSort}
               rowCount={rows.length}
             />
             <TableBody>
               {stableSort(
-                rows.filter((item) =>
-                  item.name.toLowerCase().includes(text.toLowerCase())
-                ),
+                result,
                 getComparator(order, orderBy)
               )
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
@@ -251,7 +223,7 @@ export default function EnhancedTable({ searchable, selectable, paginationEnable
                     <TableRow
                       data-testid={"table-row"}
                       hover
-                      onClick={(event) => handleClick(event, row.name)}
+                      onClick={() => onToggle(row)}
                       role="checkbox"
                       aria-checked={isItemSelected}
                       tabIndex={-1}
@@ -280,11 +252,11 @@ export default function EnhancedTable({ searchable, selectable, paginationEnable
                   );
                 })}
               {emptyRows > 0 &&
-                [...Array(emptyRows)].map((_, index) => (
-                  <TableRow key={index} style={{ height: 53 }}>
-                    <TableCell colSpan={6} />
-                  </TableRow>
-                ))}
+              [...Array(emptyRows)].map((_, index) => (
+                <TableRow key={index} style={{ height: 53 }}>
+                  <TableCell colSpan={6} />
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </TableContainer>
