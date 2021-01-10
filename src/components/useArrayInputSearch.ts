@@ -16,3 +16,9 @@ export const useArrayInputSearch = <T>(
 export const getFilterByName = (text: string) => <T extends { name: string }>(
   item: T
 ) => item.name.toLowerCase().includes(text.toLowerCase());
+
+export const getFilterById = (text: string) => <
+  T extends { id: string | number }
+>(
+  item: T
+) => item.id.toString().toLowerCase().includes(text.toLowerCase());

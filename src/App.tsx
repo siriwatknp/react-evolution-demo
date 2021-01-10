@@ -1,24 +1,53 @@
 import React from "react";
 import Alert from "@material-ui/lab/Alert";
 import CssBaseline from "@material-ui/core/CssBaseline";
+import Paper from "@material-ui/core/Paper";
 import Table from "@material-ui/core/Table";
 import TableContainer from "@material-ui/core/TableContainer";
+import TableCell from "@material-ui/core/TableCell";
 import Typography from "@material-ui/core/Typography";
 import Container from "@material-ui/core/Container";
 import Box, { BoxProps } from "@material-ui/core/Box";
 import SortableTable from "./components/SortableTable";
-import NewSortableTable, { headCells } from "./components/SortableTable.new";
+import NewSortableTable from "./components/SortableTable.new";
 import { useTableRenderer } from "./components/useTableRenderer";
 import { getData } from "./components/utils";
+import { getFilterByName } from "./components/useArrayInputSearch";
 
-const rows = getData();
+const rows = getData().map((item, index) => ({ id: index + 1, ...item }));
 function App() {
   const {
+    selectedItems,
     renderSearch,
     renderTableHead,
     renderTableBody,
     renderPagination,
-  } = useTableRenderer(rows, headCells);
+  } = useTableRenderer(
+    rows,
+    [
+      {
+        id: "name",
+        numeric: false,
+        disablePadding: true,
+        label: "Dessert (100g serving)",
+      },
+      {
+        id: "calories",
+        numeric: true,
+        disablePadding: false,
+        label: "Calories",
+      },
+      { id: "fat", numeric: true, disablePadding: false, label: "Fat (g)" },
+      { id: "carbs", numeric: true, disablePadding: false, label: "Carbs (g)" },
+      {
+        id: "protein",
+        numeric: true,
+        disablePadding: false,
+        label: "Protein (g)",
+      },
+    ],
+    { getSearchFilter: getFilterByName }
+  );
   return (
     <main>
       <CssBaseline />
@@ -26,17 +55,42 @@ function App() {
         <Typography variant={"h4"} gutterBottom>
           Render Hook
         </Typography>
-        <Box mb={2}>
-          <Box py={2}>{renderSearch({ variant: "outlined" })}</Box>
-          <Alert>Hello World</Alert>
+        <Paper>
+          <Box px={2}>
+            <Box py={2} display={"flex"} alignItems={"center"}>
+              {renderSearch({ variant: "outlined" })}
+              {selectedItems.length > 0 && (
+                <Box ml={"auto"}>
+                  <Typography>{selectedItems.length} Selected</Typography>
+                </Box>
+              )}
+            </Box>
+            <Alert>Hello World</Alert>
+          </Box>
           <TableContainer>
             <Table>
               {renderTableHead()}
-              {renderTableBody()}
-              <Box bgcolor={"primary.light"}>{renderPagination()}</Box>
+              {renderTableBody({
+                columnMapping: {
+                  0: (row) => (
+                    <TableCell component="th" scope="row" padding="none">
+                      {row.name}
+                    </TableCell>
+                  ),
+                  1: (row) => (
+                    <TableCell align="right">{row.calories}</TableCell>
+                  ),
+                  2: (row) => <TableCell align="right">{row.fat}</TableCell>,
+                  3: (row) => <TableCell align="right">{row.carbs}</TableCell>,
+                  4: (row) => (
+                    <TableCell align="right">{row.protein}</TableCell>
+                  ),
+                },
+              })}
             </Table>
           </TableContainer>
-        </Box>
+          {renderPagination()}
+        </Paper>
       </Slide>
       <Slide>
         <Typography variant={"h4"} gutterBottom>

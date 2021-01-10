@@ -21,7 +21,7 @@ export const useSelectableArray = <T>(
       if (!selectedItems.length) {
         setSelectedItems(items);
       } else {
-        setSelectedItems([])
+        setSelectedItems([]);
       }
     },
   };
@@ -31,3 +31,10 @@ export const isSameItem = <T extends { name: string }>(
   selectedItem: T,
   item: T
 ) => selectedItem.name === item.name;
+
+export const isSameItemBy = <T>(field: keyof T) => (
+  selectedItem: T,
+  item: T
+) => selectedItem[field] === item[field];
+
+export const isSameItemById = isSameItemBy('id')

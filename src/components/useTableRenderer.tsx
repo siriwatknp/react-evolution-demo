@@ -5,9 +5,9 @@ import Checkbox from "@material-ui/core/Checkbox";
 import TableSortLabel from "@material-ui/core/TableSortLabel";
 import TableHead from "@material-ui/core/TableHead";
 import TableBody from "@material-ui/core/TableBody";
-import { Data, getComparator, stableSort } from "./utils";
-import { getFilterByName, useArrayInputSearch } from "./useArrayInputSearch";
-import { isSameItem, useSelectableArray } from "./useSelectableArray";
+import { getComparator, stableSort } from "./utils";
+import { getFilterById, useArrayInputSearch } from "./useArrayInputSearch";
+import { isSameItemById, useSelectableArray } from "./useSelectableArray";
 import { createStyles, makeStyles, Theme } from "@material-ui/core/styles";
 import TablePagination from "@material-ui/core/TablePagination";
 import TextField, { TextFieldProps } from "@material-ui/core/TextField";
@@ -40,31 +40,36 @@ const useStyles = makeStyles((theme: Theme) =>
   })
 );
 
-interface HeadCell<T> {
+interface HeadCell<T extends { id: string | number }> {
   disablePadding: boolean;
   id: keyof T;
   label: string;
   numeric: boolean;
 }
 
-export const useTableRenderer = <T extends Data>(
+export const useTableRenderer = <T extends { id: string | number }>(
   rows: T[],
   headCells: HeadCell<T>[],
-  initialOrderBy?: keyof T
+  options: {
+    initialOrderBy?: keyof T;
+    getSearchFilter?: (text: string) => (item: T) => boolean;
+  } = {}
 ) => {
+  const {
+    initialOrderBy = headCells[0].id,
+    getSearchFilter = getFilterById,
+  } = options;
   const classes = useStyles();
   const [order, setOrder] = React.useState<Order>("asc");
-  const [orderBy, setOrderBy] = React.useState(
-    initialOrderBy ?? headCells[0].id
-  );
+  const [orderBy, setOrderBy] = React.useState(initialOrderBy);
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
-  const { result, text, setText } = useArrayInputSearch(rows, getFilterByName);
+  const { result, text, setText } = useArrayInputSearch(rows, getSearchFilter);
   const { selectedItems, onToggle, onToggleAll } = useSelectableArray(
     rows,
-    isSameItem
+    isSameItemById
   );
-  const selected = selectedItems.map(({ name }) => name);
+  const selected = selectedItems.map(({ id }) => id);
   const numSelected = selected.length;
   const rowCount = rows.length;
   const handleRequestSort = (
@@ -80,9 +85,9 @@ export const useTableRenderer = <T extends Data>(
   ) => {
     handleRequestSort(event, property);
   };
-  const isSelected = (name: string) => selected.indexOf(name) !== -1;
+  const isSelected = (id: string | number) => selected.indexOf(id) !== -1;
   const emptyRows =
-    rowsPerPage - Math.min(rowsPerPage, rows.length - page * rowsPerPage);
+    rowsPerPage - Math.min(rowsPerPage, result.length - page * rowsPerPage);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -95,6 +100,7 @@ export const useTableRenderer = <T extends Data>(
     setPage(0);
   };
   return {
+    selectedItems,
     renderSearch: (props: Omit<TextFieldProps, "value" | "onChange">) => (
       <TextField
         placeholder={"Search..."}
@@ -119,8 +125,7 @@ export const useTableRenderer = <T extends Data>(
           </TableCell>
           {headCells.map((headCell) => (
             <TableCell
-              // @ts-ignore
-              key={headCell.id}
+              key={headCell.id.toString()}
               align={headCell.numeric ? "right" : "left"}
               padding={headCell.disablePadding ? "none" : "default"}
               sortDirection={orderBy === headCell.id ? order : false}
@@ -144,30 +149,27 @@ export const useTableRenderer = <T extends Data>(
         </TableRow>
       </TableHead>
     ),
-    renderTableBody: () => (
+    renderTableBody: ({
+      columnMapping,
+    }: {
+      columnMapping: { [k: number]: (item: T) => React.ReactNode };
+    }) => (
       <TableBody>
-        {stableSort(
-          // @ts-ignore
-          result,
-          getComparator(order, orderBy)
-        )
+        {stableSort(result, getComparator(order, orderBy))
           .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-          // @ts-ignore
-          .map((row: T, index) => {
-            // @ts-ignore
-            const isItemSelected = isSelected(row.name);
+          .map((row, index) => {
+            const isItemSelected = isSelected(row.id);
             const labelId = `enhanced-table-checkbox-${index}`;
 
             return (
               <TableRow
                 data-testid={"table-row"}
                 hover
-                // @ts-ignore
                 onClick={() => onToggle(row)}
                 role="checkbox"
                 aria-checked={isItemSelected}
                 tabIndex={-1}
-                key={row.name}
+                key={row.id}
                 selected={isItemSelected}
               >
                 <TableCell padding="checkbox">
@@ -176,18 +178,7 @@ export const useTableRenderer = <T extends Data>(
                     inputProps={{ "aria-labelledby": labelId }}
                   />
                 </TableCell>
-                <TableCell
-                  component="th"
-                  id={labelId}
-                  scope="row"
-                  padding="none"
-                >
-                  {row.name}
-                </TableCell>
-                <TableCell align="right">{row.calories}</TableCell>
-                <TableCell align="right">{row.fat}</TableCell>
-                <TableCell align="right">{row.carbs}</TableCell>
-                <TableCell align="right">{row.protein}</TableCell>
+                {headCells.map((head, index) => columnMapping[index](row))}
               </TableRow>
             );
           })}
