@@ -1,4 +1,5 @@
 import React from "react";
+import Collapse from "@material-ui/core/Collapse";
 import TableRow from "@material-ui/core/TableRow";
 import TableCell from "@material-ui/core/TableCell";
 import Checkbox from "@material-ui/core/Checkbox";
@@ -60,6 +61,7 @@ export const useTableRenderer = <T extends { id: string | number }>(
     getSearchFilter = getFilterById,
   } = options;
   const classes = useStyles();
+  const [open, setOpen] = React.useState<false | number>(false);
   const [order, setOrder] = React.useState<Order>("asc");
   const [orderBy, setOrderBy] = React.useState(initialOrderBy);
   const [page, setPage] = React.useState(0);
@@ -101,6 +103,7 @@ export const useTableRenderer = <T extends { id: string | number }>(
   };
   return {
     selectedItems,
+    isAllSelected: selectedItems.length === rows.length,
     renderSearch: (props: Omit<TextFieldProps, "value" | "onChange">) => (
       <TextField
         placeholder={"Search..."}
@@ -151,8 +154,10 @@ export const useTableRenderer = <T extends { id: string | number }>(
     ),
     renderTableBody: ({
       columnMapping,
+      appendRow,
     }: {
       columnMapping: { [k: number]: (item: T) => React.ReactNode };
+      appendRow?: (item: T) => React.ReactNode;
     }) => (
       <TableBody>
         {stableSort(result, getComparator(order, orderBy))
@@ -162,24 +167,51 @@ export const useTableRenderer = <T extends { id: string | number }>(
             const labelId = `enhanced-table-checkbox-${index}`;
 
             return (
-              <TableRow
-                data-testid={"table-row"}
-                hover
-                onClick={() => onToggle(row)}
-                role="checkbox"
-                aria-checked={isItemSelected}
-                tabIndex={-1}
-                key={row.id}
-                selected={isItemSelected}
-              >
-                <TableCell padding="checkbox">
-                  <Checkbox
-                    checked={isItemSelected}
-                    inputProps={{ "aria-labelledby": labelId }}
-                  />
-                </TableCell>
-                {headCells.map((head, index) => columnMapping[index](row))}
-              </TableRow>
+              <>
+                <TableRow
+                  data-testid={"table-row"}
+                  hover
+                  onClick={() => {
+                    onToggle(row);
+                    if (appendRow) {
+                      setOpen((bool) =>
+                        typeof bool === "number" && bool === index
+                          ? false
+                          : index
+                      );
+                    }
+                  }}
+                  role="checkbox"
+                  aria-checked={isItemSelected}
+                  tabIndex={-1}
+                  key={row.id}
+                  selected={isItemSelected}
+                >
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={isItemSelected}
+                      inputProps={{ "aria-labelledby": labelId }}
+                    />
+                  </TableCell>
+                  {headCells.map((head, index) => columnMapping[index]?.(row))}
+                </TableRow>
+                {appendRow && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={headCells.length + 1}
+                      style={{ paddingBottom: 0, paddingTop: 0 }}
+                    >
+                      <Collapse
+                        in={open === index}
+                        timeout="auto"
+                        unmountOnExit
+                      >
+                        {appendRow(row)}
+                      </Collapse>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </>
             );
           })}
         {emptyRows > 0 &&

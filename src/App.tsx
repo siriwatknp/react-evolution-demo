@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Alert from "@material-ui/lab/Alert";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Paper from "@material-ui/core/Paper";
@@ -7,6 +7,9 @@ import TableContainer from "@material-ui/core/TableContainer";
 import TableCell from "@material-ui/core/TableCell";
 import Typography from "@material-ui/core/Typography";
 import Container from "@material-ui/core/Container";
+import IconButton from "@material-ui/core/IconButton";
+import Delete from "@material-ui/icons/Delete";
+import DeleteForever from "@material-ui/icons/DeleteForever";
 import Box, { BoxProps } from "@material-ui/core/Box";
 import SortableTable from "./components/SortableTable";
 import NewSortableTable from "./components/SortableTable.new";
@@ -17,6 +20,7 @@ import { getFilterByName } from "./components/useArrayInputSearch";
 const rows = getData().map((item, index) => ({ id: index + 1, ...item }));
 function App() {
   const {
+    isAllSelected,
     selectedItems,
     renderSearch,
     renderTableHead,
@@ -48,6 +52,11 @@ function App() {
     ],
     { getSearchFilter: getFilterByName }
   );
+  useEffect(() => {
+    if (isAllSelected) {
+      alert("Hey!");
+    }
+  }, [isAllSelected]);
   return (
     <main>
       <CssBaseline />
@@ -60,8 +69,16 @@ function App() {
             <Box py={2} display={"flex"} alignItems={"center"}>
               {renderSearch({ variant: "outlined" })}
               {selectedItems.length > 0 && (
-                <Box ml={"auto"}>
+                <Box ml={"auto"} display={"flex"} alignItems={"center"}>
                   <Typography>{selectedItems.length} Selected</Typography>
+                  &nbsp; &nbsp;
+                  <IconButton
+                    onClick={() =>
+                      alert(`Delete ${selectedItems.length} items!`)
+                    }
+                  >
+                    <Delete />
+                  </IconButton>
                 </Box>
               )}
             </Box>
@@ -86,6 +103,11 @@ function App() {
                     <TableCell align="right">{row.protein}</TableCell>
                   ),
                 },
+                appendRow: (item) => (
+                  <Box p={2} m={2} bgcolor={"grey.100"}>
+                    You need to eat carb {item.carbs} not protein {item.protein}
+                  </Box>
+                ),
               })}
             </Table>
           </TableContainer>
